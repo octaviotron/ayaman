@@ -93,13 +93,13 @@ class App {
         const beltMaterial = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 1 });
 
         // 1. Bed
-        const bedGeo = new THREE.BoxGeometry(8, 0.4, 0.4);
+        const bedGeo = new THREE.BoxGeometry(9.5, 0.4, 0.4); // Extendido de 8 a 9.5
         const beam1 = new THREE.Mesh(bedGeo, lightMetalMaterial);
-        beam1.position.z = 0.3;
+        beam1.position.set(0.75, 0, 0.3); // Desplazado un poco a la derecha para cubrir el contrapunto
         beam1.name = "Bancada (Viga 1)";
 
         const beam2 = new THREE.Mesh(bedGeo, lightMetalMaterial);
-        beam2.position.z = -0.3;
+        beam2.position.set(0.75, 0, -0.3);
         beam2.name = "Bancada (Viga 2)";
         this.latheGroup.add(beam1, beam2);
 
@@ -127,27 +127,84 @@ class App {
 
         const chuck = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.5, 6), metalMaterial);
         chuck.rotation.z = Math.PI / 2;
-        chuck.position.x = 1.05; // Desplazado para evitar Z-fighting con la base (cara en 0.75 + 0.05 de margen)
+        chuck.position.x = 1.05;
         chuck.name = "Mandril / Plato";
         this.spindleGroup.add(chuck);
 
+        // Punto de Arrastre (Drive Center)
+        const driveCenter = new THREE.Group();
+        driveCenter.position.set(1.4, 0, 0); // Justo después del plato
+
+        const dcBase = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.2, 16), metalMaterial);
+        dcBase.rotation.z = Math.PI / 2;
+        dcBase.name = "Base del Punto de Arrastre";
+        driveCenter.add(dcBase);
+
+        const dcPoint = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.3, 16), lightMetalMaterial);
+        dcPoint.rotation.z = -Math.PI / 2;
+        dcPoint.position.x = 0.2;
+        dcPoint.name = "Punto de Arrastre (Punta)";
+        driveCenter.add(dcPoint);
+
+        this.spindleGroup.add(driveCenter);
+
         this.latheGroup.add(this.spindleGroup);
 
-        // 4. Tailstock
+        // 4. Contrapunto (Tailstock)
         const tsGroup = new THREE.Group();
-        tsGroup.position.set(3, 0, 0);
+        tsGroup.position.set(4.0, 0, 0); // Movido a la derecha para dar espacio al rodamiento
 
-        const tsBase = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 0.98), darkMetalMaterial);
-        tsBase.position.y = 0.5;
-        tsBase.name = "Base del Contrapunto";
-        tsGroup.add(tsBase);
+        // Estructura de soporte del contrapunto
+        const tsStructure = new THREE.Group();
 
-        const tsPoint = new THREE.Mesh(new THREE.ConeGeometry(0.15, 0.5, 16), metalMaterial);
-        tsPoint.rotation.z = -Math.PI / 2;
-        tsPoint.position.set(-0.5, 1, 0);
-        tsPoint.name = "Punto Giratorio / Contrapunta";
-        tsGroup.add(tsPoint);
+        // Soportes laterales que bajan hasta las vigas
+        const sideGeo = new THREE.BoxGeometry(0.8, 0.6, 0.15);
+        const leftSup = new THREE.Mesh(sideGeo, metalMaterial);
+        leftSup.position.set(0, 0.5, 0.35);
+        leftSup.name = "Soporte Lateral Izquierdo";
 
+        const rightSup = new THREE.Mesh(sideGeo, metalMaterial);
+        rightSup.position.set(0, 0.5, -0.35);
+        rightSup.name = "Soporte Lateral Derecho";
+
+        // Placa superior donde se apoya el rodamiento
+        const topPlate = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.2, 1.0), darkMetalMaterial);
+        topPlate.position.y = 0.85;
+        topPlate.name = "Placa Base del Rodamiento";
+
+        tsStructure.add(leftSup, rightSup, topPlate);
+        tsGroup.add(tsStructure);
+
+        // Soporte del Rodamiento (Housing)
+        const bearingHousing = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.6, 32), metalMaterial);
+        bearingHousing.rotation.z = Math.PI / 2;
+        bearingHousing.position.set(0, 1, 0);
+        bearingHousing.name = "Soporte de Rodamiento";
+        tsGroup.add(bearingHousing);
+
+        // Rodamiento (Bearing) - Un anillo metálico
+        const bearing = new THREE.Mesh(new THREE.TorusGeometry(0.15, 0.05, 16, 32), metalMaterial);
+        bearing.position.set(-0.35, 1, 0);
+        bearing.rotation.y = Math.PI / 2;
+        bearing.name = "Rodamiento de Bolas";
+        tsGroup.add(bearing);
+
+        // Punta Giratoria (Live Center)
+        const liveCenter = new THREE.Group();
+        liveCenter.position.set(-0.4, 1, 0);
+
+        const lcPoint = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.4, 16), lightMetalMaterial);
+        lcPoint.rotation.z = -Math.PI / 2;
+        lcPoint.position.x = -0.2;
+        lcPoint.name = "Punto Giratorio (Punta)";
+        liveCenter.add(lcPoint);
+
+        const lcBase = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.2, 16), metalMaterial);
+        lcBase.rotation.z = Math.PI / 2;
+        lcBase.name = "Base de la Punta";
+        liveCenter.add(lcBase);
+
+        tsGroup.add(liveCenter);
         this.latheGroup.add(tsGroup);
 
         // 5. Motor
@@ -192,12 +249,20 @@ class App {
         beltVisual.name = "Correa de Transmisión";
         this.latheGroup.add(beltVisual);
 
-        // 7. Wood Piece
-        const woodPiece = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 5, 32), woodMaterial);
+        // 7. Pieza de Madera
+        const woodPiece = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 4.85, 32), woodMaterial);
         woodPiece.rotation.z = Math.PI / 2;
-        woodPiece.position.set(3.8, 0, 0); // Ajustado para conectar con el nuevo plato (1.05 + 0.25 + 2.5)
+        woodPiece.position.set(4.125, 0, 0);
         woodPiece.name = "Pieza de Trabajo (Madera)";
         this.spindleGroup.add(woodPiece);
+
+        // 8. Base Plana (Fundación)
+        const baseGeo = new THREE.BoxGeometry(9.5, 0.1, 2.8);
+        const basePlate = new THREE.Mesh(baseGeo, darkMetalMaterial);
+        // Posicionada debajo de las vigas (y = -0.25) y centrada entre vigas y motor
+        basePlate.position.set(0.75, -0.25, -0.75);
+        basePlate.name = "Base de la Bancada";
+        this.latheGroup.add(basePlate);
 
         this.scene.add(this.latheGroup);
     }
