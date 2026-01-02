@@ -257,12 +257,55 @@ class App {
         this.spindleGroup.add(woodPiece);
 
         // 8. Base Plana (Fundación)
-        const baseGeo = new THREE.BoxGeometry(9.5, 0.1, 2.8);
+        const baseGeo = new THREE.BoxGeometry(9.5, 0.1, 4.0); // Expandido de 2.8 a 4.0
         const basePlate = new THREE.Mesh(baseGeo, darkMetalMaterial);
-        // Posicionada debajo de las vigas (y = -0.25) y centrada entre vigas y motor
-        basePlate.position.set(0.75, -0.25, -0.75);
+        // Posicionada debajo de las vigas y expandida hacia el lado positivo Z
+        basePlate.position.set(0.75, -0.25, -0.15); // Reajustado para cubrir motor y lado opuesto
         basePlate.name = "Base de la Bancada";
         this.latheGroup.add(basePlate);
+
+        // 9. Sistema de Apoyo Dual (Banjo Doble)
+        this.toolRestGroup = new THREE.Group();
+        // Centrado con la pieza de madera (x = 0.875) y sobre la placa base (y = -0.2)
+        this.toolRestGroup.position.set(0.875, -0.2, 1.2);
+
+        const createBanjoSupport = (xPos) => {
+            const support = new THREE.Group();
+            support.position.x = xPos;
+
+            // Base vertical del soporte
+            const base = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.8, 0.7), metalMaterial);
+            base.position.y = 0.4;
+            base.name = "Soporte del Banjo (Cuerpo)";
+            support.add(base);
+
+            // Brazo que extiende el soporte hacia la madera
+            const arm = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.2, 0.8), metalMaterial);
+            arm.position.set(0, 0.7, -0.4);
+            arm.name = "Brazo del Banjo";
+            support.add(arm);
+
+            // Poste vertical regulable
+            const post = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.3, 16), lightMetalMaterial);
+            post.position.set(0, 0.9, -0.6);
+            post.name = "Poste del Portaherramientas";
+            support.add(post);
+
+            return support;
+        };
+
+        // Añadir tres soportes: extremos (±2.5) y centro (0)
+        this.toolRestGroup.add(createBanjoSupport(-2.5));
+        this.toolRestGroup.add(createBanjoSupport(0));
+        this.toolRestGroup.add(createBanjoSupport(2.5));
+
+        // El Recliende (Soporte en T) compartido por ambos banjos
+        const theRest = new THREE.Mesh(new THREE.BoxGeometry(5.0, 0.15, 0.1), lightMetalMaterial);
+        theRest.position.set(0, 1.05, -0.6);
+        theRest.name = "Apoyo en T (Recliende)";
+        this.toolRestGroup.add(theRest);
+
+        this.latheGroup.add(this.toolRestGroup);
 
         this.scene.add(this.latheGroup);
     }
