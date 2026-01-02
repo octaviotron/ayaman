@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Baquetas - 3D Rhythm Experience</title>
+    <meta name="description" content="A premium 3D visualization experience built with Three.js.">
+    <link rel="stylesheet" href="css/style.css">
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "./js/three.module.js",
+                "three/addons/": "./js/"
+            }
+        }
+    </script>
+</head>
+
+<body>
+    <div id="container"></div>
+    <div id="ui">
+        <h1>DIY LATHE</h1>
+        <p>Experimental Wood Turning Model</p>
+    </div>
+    <div id="tooltip"
+        style="position: absolute; display: none; pointer-events: none; background: rgba(0,0,0,0.8); color: white; padding: 5px 10px; border-radius: 4px; font-family: sans-serif; font-size: 12px; z-index: 100; border: 1px solid var(--accent-color);">
+    </div>
+    <script type="module" src="main.js"></script>
+</body>
+
+</html>
