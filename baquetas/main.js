@@ -13,10 +13,6 @@ class App {
         this.raycaster = new THREE.Raycaster();
         this.mouse = new THREE.Vector2();
 
-        // Settings
-        this.velocity = 0;
-        this.targetVelocity = 2; // Rotation speed
-
         this.init();
     }
 
@@ -92,22 +88,23 @@ class App {
         // Materials
         const woodMaterial = new THREE.MeshStandardMaterial({ color: 0x5d4037, roughness: 0.8 });
         const metalMaterial = new THREE.MeshStandardMaterial({ color: 0x757575, metalness: 0.9, roughness: 0.2 });
+        const lightMetalMaterial = new THREE.MeshStandardMaterial({ color: 0xd1d1d1, metalness: 0.9, roughness: 0.1 });
         const darkMetalMaterial = new THREE.MeshStandardMaterial({ color: 0x212121, metalness: 0.7, roughness: 0.5 });
         const beltMaterial = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 1 });
 
         // 1. Bed
         const bedGeo = new THREE.BoxGeometry(8, 0.4, 0.4);
-        const beam1 = new THREE.Mesh(bedGeo, woodMaterial);
+        const beam1 = new THREE.Mesh(bedGeo, lightMetalMaterial);
         beam1.position.z = 0.3;
         beam1.name = "Bancada (Viga 1)";
 
-        const beam2 = new THREE.Mesh(bedGeo, woodMaterial);
+        const beam2 = new THREE.Mesh(bedGeo, lightMetalMaterial);
         beam2.position.z = -0.3;
         beam2.name = "Bancada (Viga 2)";
         this.latheGroup.add(beam1, beam2);
 
         // 2. Headstock
-        const headstockBase = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.5, 1.2), metalMaterial);
+        const headstockBase = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.5, 1.2), lightMetalMaterial);
         headstockBase.position.set(-3.25, 0.75, 0);
         headstockBase.name = "Base del Cabezal";
         this.latheGroup.add(headstockBase);
@@ -116,21 +113,21 @@ class App {
         this.spindleGroup = new THREE.Group();
         this.spindleGroup.position.set(-3.25, 1, 0);
 
-        const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 2, 16), metalMaterial);
+        const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 2.5, 16), metalMaterial); // Más largo
         shaft.rotation.z = Math.PI / 2;
-        shaft.position.x = 1;
+        shaft.position.x = 0.9; // Alineado con la nueva posición de la correa
         shaft.name = "Eje del Cabezal";
         this.spindleGroup.add(shaft);
 
         this.spindlePulley = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 0.2, 32), metalMaterial);
         this.spindlePulley.rotation.z = Math.PI / 2;
-        this.spindlePulley.position.x = -0.5;
+        this.spindlePulley.position.x = -0.9; // Alineado con X = -4.15
         this.spindlePulley.name = "Polea del Cabezal";
         this.spindleGroup.add(this.spindlePulley);
 
         const chuck = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.5, 6), metalMaterial);
         chuck.rotation.z = Math.PI / 2;
-        chuck.position.x = 0.5;
+        chuck.position.x = 1.05; // Desplazado para evitar Z-fighting con la base (cara en 0.75 + 0.05 de margen)
         chuck.name = "Mandril / Plato";
         this.spindleGroup.add(chuck);
 
@@ -140,7 +137,7 @@ class App {
         const tsGroup = new THREE.Group();
         tsGroup.position.set(3, 0, 0);
 
-        const tsBase = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), darkMetalMaterial);
+        const tsBase = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 0.98), darkMetalMaterial);
         tsBase.position.y = 0.5;
         tsBase.name = "Base del Contrapunto";
         tsGroup.add(tsBase);
@@ -156,32 +153,49 @@ class App {
         // 5. Motor
         this.motorGroup = new THREE.Group();
         this.motorGroup.position.set(-3.25, -0.8, -1.5);
+        this.motorGroup.rotation.y = Math.PI; // Rotación de 180 grados
 
-        const motorBody = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 1.2, 16), darkMetalMaterial);
+        const motorBody = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 1.2, 16), lightMetalMaterial);
         motorBody.rotation.z = Math.PI / 2;
-        motorBody.name = "Motor Eléctrico";
+        motorBody.name = "Motor Eléctrico (Cuerpo)";
         this.motorGroup.add(motorBody);
+
+        // Eje del motor
+        const shaftGeo = new THREE.CylinderGeometry(0.08, 0.08, 0.6, 16);
+        const motorShaft = new THREE.Mesh(shaftGeo, metalMaterial);
+        motorShaft.rotation.z = Math.PI / 2;
+        motorShaft.position.x = 0.8; // Sobresale del cuerpo
+        motorShaft.name = "Eje del Motor";
+        this.motorGroup.add(motorShaft);
 
         this.motorPulley = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.2, 32), metalMaterial);
         this.motorPulley.rotation.z = Math.PI / 2;
-        this.motorPulley.position.x = 0.7;
+        this.motorPulley.position.x = 0.9; // Posicionada sobre el eje
         this.motorPulley.name = "Polea del Motor";
         this.motorGroup.add(this.motorPulley);
 
         this.latheGroup.add(this.motorGroup);
 
-        // 6. Belt
-        const beltVisual = new THREE.Mesh(new THREE.TorusGeometry(1.1, 0.05, 16, 100), beltMaterial);
-        beltVisual.position.set(-3.75, 0.1, -0.75);
-        beltVisual.rotation.y = Math.PI / 2;
-        beltVisual.scale.set(1, 0.4, 1);
+        // 6. Correa Simplificada (Loop)
+        const beltVisual = new THREE.Mesh(
+            new THREE.TorusGeometry(1.15, 0.04, 12, 48),
+            beltMaterial
+        );
+        beltVisual.position.set(-4.15, 0.1, -0.75);
+        // Primero lo ponemos en el plano YZ (rotando 90 en Y)
+        // Luego lo giramos sobre su nuevo eje local Z para alinearlo con la pendiente
+        const beltAngle = Math.atan2(1.5, 1.8);
+        beltVisual.rotation.set(0, Math.PI / 2, beltAngle);
+        // Escalamos en X (ahora apunta en Z world) e Y (world Y) para hacerlo ovalado
+        beltVisual.scale.set(0.4, 1.1, 1);
+
         beltVisual.name = "Correa de Transmisión";
         this.latheGroup.add(beltVisual);
 
         // 7. Wood Piece
         const woodPiece = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 5, 32), woodMaterial);
         woodPiece.rotation.z = Math.PI / 2;
-        woodPiece.position.set(2.5, 0, 0);
+        woodPiece.position.set(3.8, 0, 0); // Ajustado para conectar con el nuevo plato (1.05 + 0.25 + 2.5)
         woodPiece.name = "Pieza de Trabajo (Madera)";
         this.spindleGroup.add(woodPiece);
 
@@ -206,10 +220,6 @@ class App {
 
     animate() {
         requestAnimationFrame(() => this.animate());
-
-        this.velocity = THREE.MathUtils.lerp(this.velocity, this.targetVelocity, 0.02);
-        if (this.spindleGroup) this.spindleGroup.rotation.x += this.velocity * 2;
-        if (this.motorPulley) this.motorPulley.rotation.x += this.velocity * 4;
 
         // Raycasting
         this.raycaster.setFromCamera(this.mouse, this.camera);
