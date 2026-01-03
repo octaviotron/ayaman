@@ -107,17 +107,17 @@ class App {
         // Materials
         const woodMaterial = new THREE.MeshStandardMaterial({ color: 0x5d4037, roughness: 0.8 });
         const metalMaterial = new THREE.MeshStandardMaterial({ color: 0x757575, metalness: 0.9, roughness: 0.2 });
-        const lightMetalMaterial = new THREE.MeshStandardMaterial({ color: 0xd1d1d1, metalness: 0.9, roughness: 0.1 });
-        const darkMetalMaterial = new THREE.MeshStandardMaterial({ color: 0x212121, metalness: 0.7, roughness: 0.5 });
+        const lightMetalMaterial = new THREE.MeshStandardMaterial({ color: 0xeeeeee, metalness: 0.9, roughness: 0.1 });
+        const darkMetalMaterial = new THREE.MeshStandardMaterial({ color: 0x666666, metalness: 0.7, roughness: 0.3 });
         const beltMaterial = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 1 });
 
         // 1. Bed
         const bedGeo = new THREE.BoxGeometry(9.5, 0.4, 0.4); // Extendido de 8 a 9.5
-        const beam1 = new THREE.Mesh(bedGeo, lightMetalMaterial);
+        const beam1 = new THREE.Mesh(bedGeo, darkMetalMaterial);
         beam1.position.set(0.75, 0, 0.3); // Desplazado un poco a la derecha para cubrir el contrapunto
         beam1.name = "Bancada (Viga 1)";
 
-        const beam2 = new THREE.Mesh(bedGeo, lightMetalMaterial);
+        const beam2 = new THREE.Mesh(bedGeo, darkMetalMaterial);
         beam2.position.set(0.75, 0, -0.3);
         beam2.name = "Bancada (Viga 2)";
         this.latheGroup.add(beam1, beam2);
@@ -192,35 +192,66 @@ class App {
 
         // 4. Contrapunto (Tailstock)
         const tsGroup = new THREE.Group();
-        tsGroup.position.set(4.0, 0, 0); // Movido a la derecha para dar espacio al rodamiento
+        tsGroup.position.set(4.0, 0, 0);
+
+        // Base Deslizable (Sled/Suela) que corre sobre la bancada - Ajustada al ancho de las vigas
+        const tsSled = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.15, 1.0), lightMetalMaterial);
+        tsSled.position.y = 0.275; // Se posa sobre las vigas (y=0.2)
+        tsSled.name = "Soporte de Punta de Rodamiento";
+        tsGroup.add(tsSled);
 
         // Estructura de soporte del contrapunto
         const tsStructure = new THREE.Group();
 
-        // Soportes laterales que bajan hasta las vigas
-        const sideGeo = new THREE.BoxGeometry(0.8, 0.6, 0.15);
-        const leftSup = new THREE.Mesh(sideGeo, metalMaterial);
-        leftSup.position.set(0, 0.5, 0.35);
-        leftSup.name = "Soporte Lateral Izquierdo";
+        // Soportes laterales cortos sobre la base deslizable
+        const sideGeo = new THREE.BoxGeometry(0.8, 0.15, 0.15);
+        const leftSup = new THREE.Mesh(sideGeo, lightMetalMaterial);
+        leftSup.position.set(0, 0.425, 0.35);
+        leftSup.name = "Soporte de Punta de Rodamiento";
 
-        const rightSup = new THREE.Mesh(sideGeo, metalMaterial);
-        rightSup.position.set(0, 0.5, -0.35);
-        rightSup.name = "Soporte Lateral Derecho";
+        const rightSup = new THREE.Mesh(sideGeo, lightMetalMaterial);
+        rightSup.position.set(0, 0.425, -0.35);
+        rightSup.name = "Soporte de Punta de Rodamiento";
 
         // Placa superior donde se apoya el rodamiento
-        const topPlate = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.2, 1.0), darkMetalMaterial);
-        topPlate.position.y = 0.85;
-        topPlate.name = "Placa Base del Rodamiento";
+        const topPlate = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.2, 1.0), lightMetalMaterial);
+        topPlate.position.y = 0.6; // Su cara superior quedará en 0.7
+        topPlate.name = "Soporte de Punta de Rodamiento";
 
         tsStructure.add(leftSup, rightSup, topPlate);
         tsGroup.add(tsStructure);
 
         // Soporte del Rodamiento (Housing)
-        const bearingHousing = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.6, 32), metalMaterial);
+        const bearingHousing = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.6, 32), lightMetalMaterial);
         bearingHousing.rotation.z = Math.PI / 2;
         bearingHousing.position.set(0, 1, 0);
-        bearingHousing.name = "Soporte de Rodamiento";
+        bearingHousing.name = "Soporte de Punta de Rodamiento";
         tsGroup.add(bearingHousing);
+
+        // Refuerzos Trapezoidales (Escuadras de refuerzo laterales)
+        const createTSBrace = (isPositiveZ) => {
+            const shape = new THREE.Shape();
+            // Dado que rotation.y = PI/2 mapea x_local a -z_world:
+            // Para ir a +Z (isPositiveZ=true), x_local debe ser negativo (-0.5)
+            // Para ir a -Z (isPositiveZ=false), x_local debe ser positivo (0.5)
+            const direction = isPositiveZ ? -1 : 1;
+
+            shape.moveTo(0, 0.7);
+            shape.lineTo(0.5 * direction, 0.7);
+            shape.lineTo(0, 1.15);
+            shape.lineTo(0, 0.7);
+
+            const geo = new THREE.ExtrudeGeometry(shape, { depth: 0.1, bevelEnabled: false });
+            const brace = new THREE.Mesh(geo, lightMetalMaterial);
+            brace.rotation.y = Math.PI / 2;
+            // depth 0.1 en z_local mapea a x_world. Posicionando en -0.05 queda centrado [-0.05, 0.05]
+            brace.position.set(-0.05, 0, 0);
+            brace.name = "Soporte de Punta de Rodamiento";
+            return brace;
+        };
+
+        tsGroup.add(createTSBrace(false)); // Refuerzo hacia el borde -Z
+        tsGroup.add(createTSBrace(true));  // Refuerzo hacia el borde +Z
 
         // Rodamiento (Bearing) - Un anillo metálico
         const bearing = new THREE.Mesh(new THREE.TorusGeometry(0.15, 0.05, 16, 32), metalMaterial);
