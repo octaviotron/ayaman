@@ -109,6 +109,27 @@ class App {
         headstockBase.name = "Base del Cabezal";
         this.latheGroup.add(headstockBase);
 
+        // Gizmo de Orientación (Flechas de dirección positiva)
+        const gizmoGroup = new THREE.Group();
+        gizmoGroup.position.set(-3.25, 1.5, 0); // En la cima de la base del cabezal
+
+        // Eje X (Rojo)
+        const arrowX = new THREE.ArrowHelper(new THREE.Vector3(1, 0, 0), new THREE.Vector3(0, 0, 0), 1, 0xff0000);
+        arrowX.line.name = "Eje X+";
+        gizmoGroup.add(arrowX);
+
+        // Eje Y (Verde)
+        const arrowY = new THREE.ArrowHelper(new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 0, 0), 1, 0x00ff00);
+        arrowY.line.name = "Eje Y+";
+        gizmoGroup.add(arrowY);
+
+        // Eje Z (Azul)
+        const arrowZ = new THREE.ArrowHelper(new THREE.Vector3(0, 0, 1), new THREE.Vector3(0, 0, 0), 1, 0x0000ff);
+        arrowZ.line.name = "Eje Z+";
+        gizmoGroup.add(arrowZ);
+
+        this.latheGroup.add(gizmoGroup);
+
         // 3. Spindle
         this.spindleGroup = new THREE.Group();
         this.spindleGroup.position.set(-3.25, 1, 0);
@@ -266,30 +287,36 @@ class App {
 
         // 9. Sistema de Apoyo Dual (Banjo Doble)
         this.toolRestGroup = new THREE.Group();
-        // Centrado con la pieza de madera (x = 0.875) y sobre la placa base (y = -0.2)
-        this.toolRestGroup.position.set(0.875, -0.2, 1.2);
+        // Centrado con la pieza de madera (x = 0.875) y separado para mayor comodidad (z = 0.9)
+        this.toolRestGroup.position.set(0.875, -0.2, 0.9);
 
         const createBanjoSupport = (xPos) => {
             const support = new THREE.Group();
             support.position.x = xPos;
 
-            // Base vertical del soporte
-            const base = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.8, 0.7), metalMaterial);
-            base.position.y = 0.4;
+            // Base vertical del soporte - Altura reducida de 0.8 a 0.6
+            const base = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.6, 0.7), metalMaterial);
+            base.position.y = 0.3;
             base.name = "Soporte del Banjo (Cuerpo)";
             support.add(base);
 
-            // Brazo que extiende el soporte hacia la madera
+            // Brazo que extiende el soporte hacia la madera - Bajado de 0.7 a 0.5
             const arm = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.2, 0.8), metalMaterial);
-            arm.position.set(0, 0.7, -0.4);
+            arm.position.set(0, 0.5, -0.4);
             arm.name = "Brazo del Banjo";
             support.add(arm);
 
-            // Poste vertical regulable
-            const post = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.3, 16), lightMetalMaterial);
-            post.position.set(0, 0.9, -0.6);
-            post.name = "Poste del Portaherramientas";
-            support.add(post);
+            // Poste 1 (Frontal - sobre el cuerpo) - Bajado de 0.9 a 0.7
+            const post1 = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.3, 16), lightMetalMaterial);
+            post1.position.set(0, 0.7, -0.25);
+            post1.name = "Poste Frontal";
+            support.add(post1);
+
+            // Poste 2 (Trasero - sobre el cuerpo) - Bajado de 0.9 a 0.7
+            const post2 = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.3, 16), lightMetalMaterial);
+            post2.position.set(0, 0.7, 0.25);
+            post2.name = "Poste Trasero";
+            support.add(post2);
 
             return support;
         };
@@ -299,11 +326,48 @@ class App {
         this.toolRestGroup.add(createBanjoSupport(0));
         this.toolRestGroup.add(createBanjoSupport(2.5));
 
-        // El Recliende (Soporte en T) compartido por ambos banjos
-        const theRest = new THREE.Mesh(new THREE.BoxGeometry(5.0, 0.15, 0.1), lightMetalMaterial);
-        theRest.position.set(0, 1.05, -0.6);
-        theRest.name = "Apoyo en T (Recliende)";
+        // El Recliende (Soporte en T) compartido por los tres banjos - Bajado a 0.85
+        const theRest = new THREE.Mesh(new THREE.BoxGeometry(5.0, 0.15, 0.7), lightMetalMaterial);
+        theRest.position.set(0, 0.85, 0);
+        theRest.name = "Apoyo en T (Base)";
         this.toolRestGroup.add(theRest);
+
+        // Sistema de Rendija Vertical (Guía para herramientas) - Bajado a 0.925
+        const slitGroup = new THREE.Group();
+        // Posicionado exactamente sobre el borde frontal del apoyo
+        slitGroup.position.set(0, 0.925, -0.3);
+
+        const stripHeightY = 0.2;  // Grosor aumentado
+        const slitHeightY = 0.15;  // Amplitud de la rendija
+        const stripThicknessZ = 0.1;
+        const stripGeo = new THREE.BoxGeometry(5.0, stripHeightY, stripThicknessZ);
+
+        // Canto Inferior
+        const stripBottom = new THREE.Mesh(stripGeo, metalMaterial);
+        stripBottom.position.y = stripHeightY / 2;
+        stripBottom.name = "Canto de Apoyo Inferior";
+        slitGroup.add(stripBottom);
+
+        // Canto Superior
+        const stripTop = new THREE.Mesh(stripGeo, metalMaterial);
+        stripTop.position.y = stripHeightY + slitHeightY + stripHeightY / 2;
+        stripTop.name = "Canto de Apoyo Superior";
+        slitGroup.add(stripTop);
+
+        // Conectores laterales (Extremos en X) que cierran la estructura verticalmente
+        const connHeight = stripHeightY * 2 + slitHeightY;
+        const connGeo = new THREE.BoxGeometry(0.1, connHeight, stripThicknessZ);
+
+        const connLeft = new THREE.Mesh(connGeo, metalMaterial);
+        connLeft.position.set(-2.45, connHeight / 2, 0);
+        connLeft.name = "Canto de Rendija (Isz)";
+
+        const connRight = new THREE.Mesh(connGeo, metalMaterial);
+        connRight.position.set(2.45, connHeight / 2, 0);
+        connRight.name = "Canto de Rendija (Der)";
+
+        slitGroup.add(connLeft, connRight);
+        this.toolRestGroup.add(slitGroup);
 
         this.latheGroup.add(this.toolRestGroup);
 
