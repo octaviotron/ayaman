@@ -205,22 +205,12 @@ class App {
         // Estructura de soporte del contrapunto
         const tsStructure = new THREE.Group();
 
-        // Soportes laterales cortos sobre la base deslizable
-        const sideGeo = new THREE.BoxGeometry(0.8, 0.15, 0.15);
-        const leftSup = new THREE.Mesh(sideGeo, lightMetalMaterial);
-        leftSup.position.set(0, 0.425, 0.35);
-        leftSup.name = "Soporte de Punta de Rodamiento";
-
-        const rightSup = new THREE.Mesh(sideGeo, lightMetalMaterial);
-        rightSup.position.set(0, 0.425, -0.35);
-        rightSup.name = "Soporte de Punta de Rodamiento";
-
-        // Placa superior donde se apoya el rodamiento
+        // Placa superior donde se apoya el rodamiento - Bajada para sentarse sobre la base deslizable
         const topPlate = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.2, 1.0), lightMetalMaterial);
-        topPlate.position.y = 0.6; // Su cara superior quedará en 0.7
+        topPlate.position.y = 0.45; // Bajada de 0.6 a 0.45 para apoyarse sobre tsSled (y=0.35)
         topPlate.name = "Soporte de Punta de Rodamiento";
 
-        tsStructure.add(leftSup, rightSup, topPlate);
+        tsStructure.add(topPlate);
         tsGroup.add(tsStructure);
 
         // Soporte del Rodamiento (Housing)
@@ -233,9 +223,6 @@ class App {
         // Refuerzos Trapezoidales (Escuadras de refuerzo laterales)
         const createTSBrace = (isPositiveZ) => {
             const shape = new THREE.Shape();
-            // Dado que rotation.y = PI/2 mapea x_local a -z_world:
-            // Para ir a +Z (isPositiveZ=true), x_local debe ser negativo (-0.5)
-            // Para ir a -Z (isPositiveZ=false), x_local debe ser positivo (0.5)
             const direction = isPositiveZ ? -1 : 1;
 
             shape.moveTo(0, 0.7);
@@ -246,7 +233,6 @@ class App {
             const geo = new THREE.ExtrudeGeometry(shape, { depth: 0.1, bevelEnabled: false });
             const brace = new THREE.Mesh(geo, lightMetalMaterial);
             brace.rotation.y = Math.PI / 2;
-            // depth 0.1 en z_local mapea a x_world. Posicionando en -0.05 queda centrado [-0.05, 0.05]
             brace.position.set(-0.05, 0, 0);
             brace.name = "Soporte de Punta de Rodamiento";
             return brace;
@@ -254,6 +240,7 @@ class App {
 
         tsGroup.add(createTSBrace(false)); // Refuerzo hacia el borde -Z
         tsGroup.add(createTSBrace(true));  // Refuerzo hacia el borde +Z
+
 
         // Rodamiento (Bearing) - Un anillo metálico
         const bearing = new THREE.Mesh(new THREE.TorusGeometry(0.15, 0.05, 16, 32), metalMaterial);
