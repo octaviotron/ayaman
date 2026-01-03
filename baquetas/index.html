@@ -1,6 +1,6 @@
 <!--
   Baquetas Ayaman - 3D Wood Lathe Model
-  Copyright (C) 2026 Octavio Rossell <octavio.rossell@gmail.com> https://github.com/octaviotron/ayaman
+  Copyright (C) 2026 Octavio Rossell <octavio.rossell@gmail.com>, Licar Vazquez <licarochentero@gmail.com>
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -35,15 +35,85 @@
 </head>
 
 <body>
-    <div id="container"></div>
-    <div id="ui">
-        <h1>Baquetas Ayaman</h1>
-        <p>Torno 3D para baquetas</p>
-    </div>
-    <div id="info-box" style="opacity: 0; transform: translateX(20px);">
-        <h2>Pieza Seleccionada</h2>
-        <span id="part-name">---</span>
-    </div>
+    <nav>
+        <div class="nav-links">
+            <a data-section="modelo" class="active">Modelo 3D</a>
+            <a data-section="documentacion">Documentación</a>
+            <a data-section="acerca">Acerca De</a>
+        </div>
+    </nav>
+
+    <main>
+        <!-- Sección del Modelo 3D -->
+        <section id="modelo-section" class="page-section active">
+            <div id="container"></div>
+            <div id="ui">
+                <h1>Baquetas Ayaman</h1>
+                <p>Torno 3D para baquetas</p>
+            </div>
+            <div id="info-box" style="opacity: 0; transform: translateX(20px);">
+                <h2>Pieza Seleccionada</h2>
+                <span id="part-name">---</span>
+            </div>
+        </section>
+
+        <!-- Sección de Documentación -->
+        <section id="documentacion-section" class="page-section">
+            <div class="content-wrapper">
+                <h2>Documentación</h2>
+                <p><strong>Baquetas Ayaman</strong> es una iniciativa que nace para contrarrestar la obsolescencia
+                    programada en el mercado musical, priorizando la durabilidad y la honestidad en la fabricación de
+                    herramientas para percusionistas.</p>
+
+                <h3>Ingeniería de Materiales</h3>
+                <p>Nuestra fabricación se basa en una selección rigurosa de maderas con densidades óptimas:</p>
+                <ul>
+                    <li><strong>Maderas Tradicionales:</strong> Uso de Nogal (Hickory) y Arce (Maple) por su excelente
+                        relación resistencia-absorción.</li>
+                    <li><strong>Investigación y Desarrollo:</strong> Exploración de maderas alternativas como
+                        <em>Vera</em> y <em>Cardón</em> para replantear el equilibrio entre flexibilidad y densidad.
+                    </li>
+                </ul>
+
+                <h3>Proceso de Fabricación</h3>
+                <p>Combinamos el conocimiento empírico de músicos profesionales con la precisión mecánica del torno:</p>
+                <ul>
+                    <li><strong>Precisión Mecánica:</strong> Uso de tornos para garantizar simetría absoluta, balance
+                        perfecto y uniformidad en la producción.</li>
+                    <li><strong>Personalización Total:</strong> Servicio a medida donde el artista define longitud,
+                        grosor, forma de la punta y tipo de acabado.</li>
+                </ul>
+
+                <h3>Sustentabilidad y Ética</h3>
+                <p>Rompemos el ciclo del consumo cíclico. Nuestro objetivo es proveer un consumible casi imperecedero,
+                    reduciendo el desecho constante de baquetas diseñadas para fallar y promoviendo una cultura de
+                    consumo responsable y lealtad basada en la calidad verdadera.</p>
+            </div>
+        </section>
+
+        <!-- Sección Acerca De -->
+        <section id="acerca-section" class="page-section">
+            <div class="content-wrapper">
+                <h2>Acerca De</h2>
+                <p><strong>Baquetas Ayaman: Torno de Modelado</strong> es una herramienta de visualización técnica
+                    avanzada para el diseño de baquetas rítmicas.</p>
+
+                <h3>Créditos</h3>
+                <p>Co-Autores:</p>
+                <ul>
+                    <li>Octavio Rossell (<a href="mailto:octavio.rossell@gmail.com"
+                            style="color: var(--accent-color);">octavio.rossell@gmail.com</a>)</li>
+                    <li>Licar Vazquez (<a href="mailto:licarochentero@gmail.com"
+                            style="color: var(--accent-color);">licarochentero@gmail.com</a>)</li>
+                </ul>
+                <p>GitHub: <a href="https://github.com/octaviotron/ayaman" target="_blank"
+                        style="color: var(--accent-color);">github.com/octaviotron/ayaman</a></p>
+
+                <h3>Licencia GPLv3</h3>
+            </div>
+        </section>
+    </main>
+
     <script type="module" src="main.js"></script>
 </body>
 

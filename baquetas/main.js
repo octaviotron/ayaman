@@ -1,6 +1,6 @@
 /**
  * Baquetas Ayaman - 3D Wood Lathe Model
- * Copyright (C) 2026 Octavio Rossell <octavio.rossell@gmail.com> https://github.com/octaviotron/ayaman
+ * Copyright (C) 2026 Octavio Rossell <octavio.rossell@gmail.com>, Licar Vazquez <licarochentero@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -97,8 +97,34 @@ class App {
         window.addEventListener('resize', () => this.onResize());
         window.addEventListener('mousemove', (e) => this.onMouseMove(e));
 
+        // Initialize Navigation
+        this.initNavigation();
+
         // Start animation loop
         this.animate();
+    }
+
+    initNavigation() {
+        const navLinks = document.querySelectorAll('.nav-links a');
+        const sections = document.querySelectorAll('.page-section');
+
+        navLinks.forEach(link => {
+            link.addEventListener('click', () => {
+                const targetSectionId = `${link.getAttribute('data-section')}-section`;
+
+                // Update Links
+                navLinks.forEach(l => l.classList.remove('active'));
+                link.classList.add('active');
+
+                // Update Sections
+                sections.forEach(section => {
+                    section.classList.remove('active');
+                    if (section.id === targetSectionId) {
+                        section.classList.add('active');
+                    }
+                });
+            });
+        });
     }
 
 
