@@ -96,10 +96,13 @@ class App {
         // Events
         window.addEventListener('resize', () => this.onResize());
         window.addEventListener('mousemove', (e) => this.onMouseMove(e));
+        window.addEventListener('keydown', (e) => this.onKeyDown(e));
 
         // Start animation loop
         this.animate();
     }
+
+
 
     createLathe() {
         this.latheGroup = new THREE.Group();
@@ -109,7 +112,7 @@ class App {
         const metalMaterial = new THREE.MeshStandardMaterial({ color: 0x757575, metalness: 0.9, roughness: 0.2 });
         const lightMetalMaterial = new THREE.MeshStandardMaterial({ color: 0xeeeeee, metalness: 0.9, roughness: 0.1 });
         const darkMetalMaterial = new THREE.MeshStandardMaterial({ color: 0x666666, metalness: 0.7, roughness: 0.3 });
-        const beltMaterial = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 1 });
+        const beltMaterial = new THREE.MeshStandardMaterial({ color: 0xbbbbbb, roughness: 0.7 });
 
         // 1. Bed
         const bedGeo = new THREE.BoxGeometry(9.5, 0.4, 0.4); // Extendido de 8 a 9.5
@@ -122,32 +125,31 @@ class App {
         beam2.name = "Bancada (Viga 2)";
         this.latheGroup.add(beam1, beam2);
 
-        // 2. Headstock
+        // 2. Headstock (Cabezal) - Elevado para sentarse sobre la bancada (y=0.2)
+        // Se añade un micro-offset (0.001) para evitar Z-fighting con las caras de las vigas
         const headstockBase = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.5, 1.2), lightMetalMaterial);
-        headstockBase.position.set(-3.25, 0.75, 0);
+        headstockBase.position.set(-3.25, 0.951, 0);
         headstockBase.name = "Base del Cabezal";
         this.latheGroup.add(headstockBase);
 
         // Gizmo de Orientación (Flechas de dirección positiva)
-        const gizmoGroup = new THREE.Group();
-        gizmoGroup.position.set(-3.25, 1.5, 0); // En la cima de la base del cabezal
+        this.gizmo = new THREE.Group();
+        this.gizmo.position.set(-3.25, 1.702, 0); // Ajustado a la nueva cima del cabezal
 
-        // Eje X (Rojo)
         const arrowX = new THREE.ArrowHelper(new THREE.Vector3(1, 0, 0), new THREE.Vector3(0, 0, 0), 1, 0xff0000);
         arrowX.line.name = "Eje X+";
-        gizmoGroup.add(arrowX);
+        this.gizmo.add(arrowX);
 
-        // Eje Y (Verde)
         const arrowY = new THREE.ArrowHelper(new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 0, 0), 1, 0x00ff00);
         arrowY.line.name = "Eje Y+";
-        gizmoGroup.add(arrowY);
+        this.gizmo.add(arrowY);
 
-        // Eje Z (Azul)
         const arrowZ = new THREE.ArrowHelper(new THREE.Vector3(0, 0, 1), new THREE.Vector3(0, 0, 0), 1, 0x0000ff);
         arrowZ.line.name = "Eje Z+";
-        gizmoGroup.add(arrowZ);
+        this.gizmo.add(arrowZ);
 
-        this.latheGroup.add(gizmoGroup);
+        this.gizmo.visible = false; // Oculto por defecto
+        this.latheGroup.add(this.gizmo);
 
         // 3. Spindle
         this.spindleGroup = new THREE.Group();
@@ -280,7 +282,7 @@ class App {
 
         // 5. Motor
         this.motorGroup = new THREE.Group();
-        this.motorGroup.position.set(-3.25, -0.8, -1.5);
+        this.motorGroup.position.set(-3.25, -0.801, -1.5);
         this.motorGroup.rotation.y = Math.PI; // Rotación de 180 grados
 
         const motorBody = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 1.2, 16), lightMetalMaterial);
@@ -304,18 +306,36 @@ class App {
 
         this.latheGroup.add(this.motorGroup);
 
-        // 6. Correa Simplificada (Loop)
-        const beltVisual = new THREE.Mesh(
-            new THREE.TorusGeometry(1.15, 0.04, 12, 48),
-            beltMaterial
-        );
-        beltVisual.position.set(-4.15, 0.1, -0.75);
-        // Primero lo ponemos en el plano YZ (rotando 90 en Y)
-        // Luego lo giramos sobre su nuevo eje local Z para alinearlo con la pendiente
-        const beltAngle = Math.atan2(1.5, 1.8);
-        beltVisual.rotation.set(0, Math.PI / 2, beltAngle);
-        // Escalamos en X (ahora apunta en Z world) e Y (world Y) para hacerlo ovalado
-        beltVisual.scale.set(0.4, 1.1, 1);
+        // 6. Correa de Transmisión Realista (Geometría Variable)
+        const r1 = 0.42; // Radio en la polea del cabezal (polea 0.4)
+        const r2 = 0.22; // Radio en la polea del motor (polea 0.2)
+        const p1 = { x: 0.0, y: 1.0 };    // Mapea a Z:0, Y:1.0 (Mundo)
+        const p2 = { x: 1.5, y: -0.801 }; // Mapea a Z:-1.5, Y:-0.8 (Mundo)
+
+        const dx = p2.x - p1.x;
+        const dy = p2.y - p1.y;
+        const d = Math.sqrt(dx * dx + dy * dy);
+        const angle = Math.atan2(dy, dx);
+        const offset = Math.acos((r1 - r2) / d);
+
+        const beltShape = new THREE.Shape();
+        // Contorno exterior
+        beltShape.absarc(p1.x, p1.y, r1, angle + offset, angle - offset, false);
+        beltShape.absarc(p2.x, p2.y, r2, angle - offset, angle + offset, false);
+
+        // Agujero interior
+        const holePath = new THREE.Path();
+        const thick = 0.04;
+        holePath.absarc(p1.x, p1.y, r1 - thick, angle + offset, angle - offset, false);
+        holePath.absarc(p2.x, p2.y, r2 - thick, angle - offset, angle + offset, false);
+        beltShape.holes.push(holePath);
+
+        const beltGeo = new THREE.ExtrudeGeometry(beltShape, { depth: 0.1, bevelEnabled: false });
+        const beltVisual = new THREE.Mesh(beltGeo, beltMaterial);
+
+        // Posicionamiento: alinear el plano local XY con el plano YZ del mundo
+        beltVisual.rotation.y = Math.PI / 2;
+        beltVisual.position.x = -4.2; // Centrado exacto en las poleas (Mundo X = -4.15)
 
         beltVisual.name = "Correa de Transmisión";
         this.latheGroup.add(beltVisual);
@@ -330,8 +350,8 @@ class App {
         // 8. Base Plana (Fundación)
         const baseGeo = new THREE.BoxGeometry(9.5, 0.1, 4.0); // Expandido de 2.8 a 4.0
         const basePlate = new THREE.Mesh(baseGeo, darkMetalMaterial);
-        // Posicionada debajo de las vigas y expandida hacia el lado positivo Z
-        basePlate.position.set(0.75, -0.25, -0.15); // Reajustado para cubrir motor y lado opuesto
+        // Posicionada debajo de las vigas con un offset mínimo (0.005) para evitar Z-fighting
+        basePlate.position.set(0.75, -0.255, -0.15); // Reajustado para cubrir motor y lado opuesto
         basePlate.name = "Base de la Bancada";
         this.latheGroup.add(basePlate);
 
@@ -340,45 +360,11 @@ class App {
         // Centrado con la pieza de madera (x = 0.875) y separado para mayor comodidad (z = 0.9)
         this.toolRestGroup.position.set(0.875, -0.2, 0.9);
 
-        const createBanjoSupport = (xPos) => {
-            const support = new THREE.Group();
-            support.position.x = xPos;
 
-            // Base vertical del soporte - Expandida hasta el borde de la base de la bancada
-            const base = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.6, 1.3), metalMaterial);
-            base.position.set(0, 0.3, 0.3); // Desplazado en Z para alcanzar el borde
-            base.name = "Soporte del Banjo (Cuerpo)";
-            support.add(base);
 
-            // Brazo que extiende el soporte hacia la madera - Bajado de 0.7 a 0.5
-            const arm = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.2, 0.8), metalMaterial);
-            arm.position.set(0, 0.5, -0.4);
-            arm.name = "Brazo del Banjo";
-            support.add(arm);
-
-            // Poste 1 (Frontal - sobre el cuerpo) - Bajado de 0.9 a 0.7
-            const post1 = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.3, 16), lightMetalMaterial);
-            post1.position.set(0, 0.7, -0.25);
-            post1.name = "Poste Frontal";
-            support.add(post1);
-
-            // Poste 2 (Trasero - sobre el cuerpo) - Bajado de 0.9 a 0.7
-            const post2 = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.3, 16), lightMetalMaterial);
-            post2.position.set(0, 0.7, 0.25);
-            post2.name = "Poste Trasero";
-            support.add(post2);
-
-            return support;
-        };
-
-        // Añadir tres soportes: extremos (±2.5) y centro (0)
-        this.toolRestGroup.add(createBanjoSupport(-2.5));
-        this.toolRestGroup.add(createBanjoSupport(0));
-        this.toolRestGroup.add(createBanjoSupport(2.5));
-
-        // El Recliende (Soporte en T) compartido por los tres banjos - Bajado a 0.85
-        const theRest = new THREE.Mesh(new THREE.BoxGeometry(5.0, 0.15, 0.7), lightMetalMaterial);
-        theRest.position.set(0, 0.85, 0);
+        // El Recliende (Soporte en T) compartido - Extendido hacia abajo hasta la base
+        const theRest = new THREE.Mesh(new THREE.BoxGeometry(5.0, 0.93, 1.3), lightMetalMaterial);
+        theRest.position.set(0, 0.46, 0.3);
         theRest.name = "Apoyo en T (Base)";
         this.toolRestGroup.add(theRest);
 
@@ -416,7 +402,20 @@ class App {
         connRight.position.set(2.45, connHeight / 2, 0);
         connRight.name = "Sistema de Rendija";
 
-        slitGroup.add(connLeft, connRight);
+        // Soportes de Cierre Lateral (Muretes) que recorren toda la profundidad del apoyo en T
+        const wallDepth = 1.3;
+        const wallGeo = new THREE.BoxGeometry(0.1, connHeight, wallDepth);
+
+        const wallLeft = new THREE.Mesh(wallGeo, metalMaterial);
+        // Alineado con el eje X del conector y centrado en la profundidad del apoyo en T (offset 0.6 respecto al slit)
+        wallLeft.position.set(-2.45, connHeight / 2, 0.6);
+        wallLeft.name = "Sistema de Rendija";
+
+        const wallRight = new THREE.Mesh(wallGeo, metalMaterial);
+        wallRight.position.set(2.45, connHeight / 2, 0.6);
+        wallRight.name = "Sistema de Rendija";
+
+        slitGroup.add(connLeft, connRight, wallLeft, wallRight);
 
         // Estructuras de Firmeza (Refuerzos triangulares / Escuadras)
         const createBrace = (xPos, isRight) => {
@@ -456,6 +455,13 @@ class App {
     onMouseMove(event) {
         this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
         this.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+    }
+
+    onKeyDown(event) {
+        if (event.code === 'Space') {
+            event.preventDefault();
+            this.gizmo.visible = !this.gizmo.visible;
+        }
     }
 
     onResize() {
