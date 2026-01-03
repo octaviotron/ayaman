@@ -123,11 +123,11 @@ class App {
 
         // 1. Bed
         const bedGeo = new THREE.BoxGeometry(9.5, 0.4, 0.4); // Extendido de 8 a 9.5
-        const beam1 = new THREE.Mesh(bedGeo, darkMetalMaterial);
+        const beam1 = new THREE.Mesh(bedGeo, lightMetalMaterial);
         beam1.position.set(0.75, 0, 0.3); // Desplazado un poco a la derecha para cubrir el contrapunto
         beam1.name = "Bancada (Viga 1)";
 
-        const beam2 = new THREE.Mesh(bedGeo, darkMetalMaterial);
+        const beam2 = new THREE.Mesh(bedGeo, lightMetalMaterial);
         beam2.position.set(0.75, 0, -0.3);
         beam2.name = "Bancada (Viga 2)";
         this.latheGroup.add(beam1, beam2);
@@ -186,13 +186,13 @@ class App {
         tsGroup.position.set(4.0, 0, 0);
 
         // Base Deslizable (Sled/Suela) - Aumentada en altura hasta el nivel de los refuerzos (y=0.7)
-        const tsSled = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.5, 1.0), blackMetalMaterial);
+        const tsSled = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.5, 1.0), darkMetalMaterial);
         tsSled.position.y = 0.45; // Bottom at 0.2 (on beams), Top at 0.7
         tsSled.name = "Suela Deslizable del Contrapunto";
         tsGroup.add(tsSled);
 
-        // Bloque Guía (Chaveta/Guía inferior) - Alargado y en color negro metálico
-        const tsGuide = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.2, 0.19), blackMetalMaterial);
+        // Bloque Guía (Chaveta/Guía inferior) - Alargado
+        const tsGuide = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.2, 0.19), darkMetalMaterial);
         tsGuide.position.y = 0.1; // Se inserta entre las vigas (las caras internas están en y=0.2 y z=±0.1)
         tsGuide.name = "Guía de Alineación inferior";
         tsGroup.add(tsGuide);
@@ -227,6 +227,45 @@ class App {
         tsGroup.add(createTSBrace(false)); // Refuerzo hacia el borde -Z
         tsGroup.add(createTSBrace(true));  // Refuerzo hacia el borde +Z
 
+        // 4.1 Sistema de Fijación (Bloqueo del Contrapunto)
+        const clampGroup = new THREE.Group();
+        clampGroup.position.set(0.3, 0.1, 0.5); // Subido a y=0.1 para alinear con la mitad superior de la viga
+
+        // Soporte de la manija - Altura 0.5 (va de y=-0.05 a y=0.45)
+        const clampBase = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.5, 0.2), darkMetalMaterial);
+        clampBase.position.y = 0.1; // Desplazado hacia arriba para mantener el tope en la mitad de la suela
+        clampBase.name = "Soporte de Fijación";
+        clampGroup.add(clampBase);
+
+        // Espárrago / Tornillo de apriete - Acortado
+        const bolt = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.2, 16), metalMaterial);
+        bolt.rotation.x = Math.PI / 2;
+        bolt.position.z = 0.1;
+        bolt.name = "Tornillo de Apriete";
+        clampGroup.add(bolt);
+
+        // Manija Giratoria (Palanca)
+        const handleGroup = new THREE.Group();
+        handleGroup.position.z = 0.2;
+
+        // Eje central de la manija
+        const handleCenter = new THREE.Mesh(new THREE.SphereGeometry(0.06, 16, 16), lightMetalMaterial);
+        handleCenter.name = "Manija de Fijación";
+        handleGroup.add(handleCenter);
+
+        // Brazos de la palanca (Manija en Cruz)
+        const leverGeo = new THREE.CylinderGeometry(0.03, 0.03, 0.3, 16);
+        const lever1 = new THREE.Mesh(leverGeo, lightMetalMaterial);
+        lever1.rotation.z = Math.PI / 2;
+        lever1.name = "Manija de Fijación";
+
+        const lever2 = new THREE.Mesh(leverGeo, lightMetalMaterial);
+        lever2.name = "Manija de Fijación";
+
+        handleGroup.add(lever1, lever2);
+        clampGroup.add(handleGroup);
+
+        tsGroup.add(clampGroup);
 
         // Rodamiento (Bearing) - Un anillo metálico
         const bearing = new THREE.Mesh(new THREE.TorusGeometry(0.15, 0.05, 16, 32), metalMaterial);
