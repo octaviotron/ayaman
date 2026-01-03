@@ -96,7 +96,6 @@ class App {
         // Events
         window.addEventListener('resize', () => this.onResize());
         window.addEventListener('mousemove', (e) => this.onMouseMove(e));
-        window.addEventListener('keydown', (e) => this.onKeyDown(e));
 
         // Start animation loop
         this.animate();
@@ -113,6 +112,14 @@ class App {
         const lightMetalMaterial = new THREE.MeshStandardMaterial({ color: 0xeeeeee, metalness: 0.9, roughness: 0.1 });
         const darkMetalMaterial = new THREE.MeshStandardMaterial({ color: 0x666666, metalness: 0.7, roughness: 0.3 });
         const beltMaterial = new THREE.MeshStandardMaterial({ color: 0xbbbbbb, roughness: 0.7 });
+        const blackMetalMaterial = new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.9, roughness: 0.2 });
+        const glassMaterial = new THREE.MeshStandardMaterial({
+            color: 0xaaaaaa,
+            transparent: true,
+            opacity: 0.5,
+            metalness: 0.1,
+            roughness: 0.1
+        });
 
         // 1. Bed
         const bedGeo = new THREE.BoxGeometry(9.5, 0.4, 0.4); // Extendido de 8 a 9.5
@@ -132,24 +139,6 @@ class App {
         headstockBase.name = "Base del Cabezal";
         this.latheGroup.add(headstockBase);
 
-        // Gizmo de Orientación (Flechas de dirección positiva)
-        this.gizmo = new THREE.Group();
-        this.gizmo.position.set(-3.25, 1.702, 0); // Ajustado a la nueva cima del cabezal
-
-        const arrowX = new THREE.ArrowHelper(new THREE.Vector3(1, 0, 0), new THREE.Vector3(0, 0, 0), 1, 0xff0000);
-        arrowX.line.name = "Eje X+";
-        this.gizmo.add(arrowX);
-
-        const arrowY = new THREE.ArrowHelper(new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 0, 0), 1, 0x00ff00);
-        arrowY.line.name = "Eje Y+";
-        this.gizmo.add(arrowY);
-
-        const arrowZ = new THREE.ArrowHelper(new THREE.Vector3(0, 0, 1), new THREE.Vector3(0, 0, 0), 1, 0x0000ff);
-        arrowZ.line.name = "Eje Z+";
-        this.gizmo.add(arrowZ);
-
-        this.gizmo.visible = false; // Oculto por defecto
-        this.latheGroup.add(this.gizmo);
 
         // 3. Spindle
         this.spindleGroup = new THREE.Group();
@@ -196,28 +185,25 @@ class App {
         const tsGroup = new THREE.Group();
         tsGroup.position.set(4.0, 0, 0);
 
-        // Base Deslizable (Sled/Suela) que corre sobre la bancada - Ajustada al ancho de las vigas
-        const tsSled = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.15, 1.0), lightMetalMaterial);
-        tsSled.position.y = 0.275; // Se posa sobre las vigas (y=0.2)
-        tsSled.name = "Soporte de Punta de Rodamiento";
+        // Base Deslizable (Sled/Suela) - Aumentada en altura hasta el nivel de los refuerzos (y=0.7)
+        const tsSled = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.5, 1.0), blackMetalMaterial);
+        tsSled.position.y = 0.45; // Bottom at 0.2 (on beams), Top at 0.7
+        tsSled.name = "Suela Deslizable del Contrapunto";
         tsGroup.add(tsSled);
 
-        // Estructura de soporte del contrapunto
-        const tsStructure = new THREE.Group();
+        // Bloque Guía (Chaveta/Guía inferior) - Alargado y en color negro metálico
+        const tsGuide = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.2, 0.19), blackMetalMaterial);
+        tsGuide.position.y = 0.1; // Se inserta entre las vigas (las caras internas están en y=0.2 y z=±0.1)
+        tsGuide.name = "Guía de Alineación inferior";
+        tsGroup.add(tsGuide);
 
-        // Placa superior donde se apoya el rodamiento - Bajada para sentarse sobre la base deslizable
-        const topPlate = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.2, 1.0), lightMetalMaterial);
-        topPlate.position.y = 0.45; // Bajada de 0.6 a 0.45 para apoyarse sobre tsSled (y=0.35)
-        topPlate.name = "Soporte de Punta de Rodamiento";
 
-        tsStructure.add(topPlate);
-        tsGroup.add(tsStructure);
 
         // Soporte del Rodamiento (Housing)
         const bearingHousing = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.6, 32), lightMetalMaterial);
         bearingHousing.rotation.z = Math.PI / 2;
         bearingHousing.position.set(0, 1, 0);
-        bearingHousing.name = "Soporte de Punta de Rodamiento";
+        bearingHousing.name = "Alojamiento del Rodamiento";
         tsGroup.add(bearingHousing);
 
         // Refuerzos Trapezoidales (Escuadras de refuerzo laterales)
@@ -234,7 +220,7 @@ class App {
             const brace = new THREE.Mesh(geo, lightMetalMaterial);
             brace.rotation.y = Math.PI / 2;
             brace.position.set(-0.05, 0, 0);
-            brace.name = "Soporte de Punta de Rodamiento";
+            brace.name = "Escuadra de Refuerzo";
             return brace;
         };
 
@@ -336,7 +322,7 @@ class App {
 
         // 8. Base Plana (Fundación)
         const baseGeo = new THREE.BoxGeometry(9.5, 0.1, 4.0); // Expandido de 2.8 a 4.0
-        const basePlate = new THREE.Mesh(baseGeo, darkMetalMaterial);
+        const basePlate = new THREE.Mesh(baseGeo, glassMaterial);
         // Posicionada debajo de las vigas con un offset mínimo (0.005) para evitar Z-fighting
         basePlate.position.set(0.75, -0.255, -0.15); // Reajustado para cubrir motor y lado opuesto
         basePlate.name = "Base de la Bancada";
@@ -442,13 +428,6 @@ class App {
     onMouseMove(event) {
         this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
         this.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-    }
-
-    onKeyDown(event) {
-        if (event.code === 'Space') {
-            event.preventDefault();
-            this.gizmo.visible = !this.gizmo.visible;
-        }
     }
 
     onResize() {
