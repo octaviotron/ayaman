@@ -4,7 +4,8 @@ import { OrbitControls } from 'three/addons/OrbitControls.js';
 class App {
     constructor() {
         this.container = document.getElementById('container');
-        this.tooltip = document.getElementById('tooltip');
+        this.infoBox = document.getElementById('info-box');
+        this.partNameDisplay = document.getElementById('part-name');
         this.scene = new THREE.Scene();
         this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -294,9 +295,9 @@ class App {
             const support = new THREE.Group();
             support.position.x = xPos;
 
-            // Base vertical del soporte - Altura reducida de 0.8 a 0.6
-            const base = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.6, 0.7), metalMaterial);
-            base.position.y = 0.3;
+            // Base vertical del soporte - Expandida hasta el borde de la base de la bancada
+            const base = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.6, 1.3), metalMaterial);
+            base.position.set(0, 0.3, 0.3); // Desplazado en Z para alcanzar el borde
             base.name = "Soporte del Banjo (Cuerpo)";
             support.add(base);
 
@@ -345,13 +346,13 @@ class App {
         // Canto Inferior
         const stripBottom = new THREE.Mesh(stripGeo, metalMaterial);
         stripBottom.position.y = stripHeightY / 2;
-        stripBottom.name = "Canto de Apoyo Inferior";
+        stripBottom.name = "Sistema de Rendija";
         slitGroup.add(stripBottom);
 
         // Canto Superior
         const stripTop = new THREE.Mesh(stripGeo, metalMaterial);
         stripTop.position.y = stripHeightY + slitHeightY + stripHeightY / 2;
-        stripTop.name = "Canto de Apoyo Superior";
+        stripTop.name = "Sistema de Rendija";
         slitGroup.add(stripTop);
 
         // Conectores laterales (Extremos en X) que cierran la estructura verticalmente
@@ -360,13 +361,41 @@ class App {
 
         const connLeft = new THREE.Mesh(connGeo, metalMaterial);
         connLeft.position.set(-2.45, connHeight / 2, 0);
-        connLeft.name = "Canto de Rendija (Isz)";
+        connLeft.name = "Sistema de Rendija";
 
         const connRight = new THREE.Mesh(connGeo, metalMaterial);
         connRight.position.set(2.45, connHeight / 2, 0);
-        connRight.name = "Canto de Rendija (Der)";
+        connRight.name = "Sistema de Rendija";
 
         slitGroup.add(connLeft, connRight);
+
+        // Estructuras de Firmeza (Refuerzos triangulares / Escuadras)
+        const createBrace = (xPos, isRight) => {
+            const shape = new THREE.Shape();
+            shape.moveTo(0, 0);
+            shape.lineTo(0.4, 0); // Base sobre el recliende (un poco más larga)
+            shape.lineTo(0, 0.55); // Altura total de la rendija
+            shape.lineTo(0, 0);
+
+            const braceGeo = new THREE.ExtrudeGeometry(shape, { depth: 0.1, bevelEnabled: false });
+            const brace = new THREE.Mesh(braceGeo, metalMaterial);
+            // Rotamos -90 grados en Y para que el triángulo refuerce hacia atrás
+            brace.rotation.y = -Math.PI / 2;
+
+            // Ajuste fino de posición:
+            // xPos: -2.5 (Extrusion va a -2.4) o 2.4 (Extrusion va a 2.5) para quedar alineados con conectores
+            // y: 0 para posarse sobre el recliende
+            // z: 0.05 para empezar justo detrás de las barras verticales (que terminan en z=0.05)
+            // xPos: 2.4 (Extrusion va hacia 2.3) o -2.4 (Extrusion va hacia -2.5)
+            const finalX = xPos;
+            brace.position.set(finalX, 0, 0.05);
+            brace.name = "Sistema de Rendija";
+            return brace;
+        };
+
+        slitGroup.add(createBrace(-2.4, false));
+        slitGroup.add(createBrace(2.5, true));
+
         this.toolRestGroup.add(slitGroup);
 
         this.latheGroup.add(this.toolRestGroup);
@@ -378,10 +407,6 @@ class App {
     onMouseMove(event) {
         this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
         this.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-
-        // Update tooltip position
-        this.tooltip.style.left = (event.clientX + 15) + 'px';
-        this.tooltip.style.top = (event.clientY + 15) + 'px';
     }
 
     onResize() {
@@ -398,15 +423,25 @@ class App {
         const intersects = this.raycaster.intersectObjects(this.latheGroup.children, true);
 
         if (intersects.length > 0) {
-            const object = intersects[0].object;
-            if (object.name) {
-                this.tooltip.style.display = 'block';
-                this.tooltip.innerText = object.name;
+            let target = intersects[0].object;
+
+            // Bubble up to find a named parent if the hit object itself is unnamed
+            // or to treat the whole group as one logical unit
+            while (target && !target.name && target.parent) {
+                target = target.parent;
+            }
+
+            if (target && target.name) {
+                this.partNameDisplay.innerText = target.name;
+                this.infoBox.style.opacity = '1';
+                this.infoBox.style.transform = 'translateX(0)';
             } else {
-                this.tooltip.style.display = 'none';
+                this.infoBox.style.opacity = '0';
+                this.infoBox.style.transform = 'translateX(20px)';
             }
         } else {
-            this.tooltip.style.display = 'none';
+            this.infoBox.style.opacity = '0';
+            this.infoBox.style.transform = 'translateX(20px)';
         }
 
         this.controls.update();
